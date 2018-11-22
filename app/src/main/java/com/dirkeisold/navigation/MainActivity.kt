@@ -5,74 +5,70 @@ import android.os.Bundle
 import android.support.design.widget.BottomNavigationView
 import android.support.v4.app.Fragment
 import android.support.v7.app.AppCompatActivity
+import android.view.MenuItem
 import android.view.View
 import android.widget.FrameLayout
 import androidx.navigation.NavController
 import androidx.navigation.findNavController
-import androidx.navigation.fragment.FragmentNavigator
 import com.dirkeisold.navigation.common.OnReselectedDelegate
 import com.dirkeisold.navigation.common.or
 import kotlinx.android.synthetic.main.activity_main.*
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), BottomNavigationView.OnNavigationItemSelectedListener {
 
-    val sectionHomeWrapper: FrameLayout by lazy { section_home_wrapper }
-    val sectionDashboardWrapper: FrameLayout by lazy { section_dashboard_wrapper }
-    val sectionNotificationsWrapper: FrameLayout by lazy { section_notification_wrapper }
+    class FragmentInfo(val menuId: Int,
+                       private val getFrame: Function1<Unit?, FrameLayout>,
+                       private val getController: Function1<Unit?, NavController>,
+                       private val getFragment: Function1<Unit?, Fragment>) {
+        val fragment: Fragment by lazy { getFragment(null) }
+        val controller: NavController by lazy { getController(null) }
+        val wrapper: FrameLayout by lazy { getFrame(null) }
+    }
 
-    val navHomeController: NavController by lazy { findNavController(R.id.section_home) }
-    val navHomeFragment: Fragment by lazy { section_home }
-    val navDashboardController: NavController by lazy { findNavController(R.id.section_dashboard) }
-    val navDashboardFragment: Fragment by lazy { section_dashboard }
-    val navNotificationController: NavController by lazy { findNavController(R.id.section_notification) }
-    val navNotificationFragment: Fragment by lazy { section_notification }
+    private val infoHome = FragmentInfo(
+            R.id.navigation_home,
+            { section_home_wrapper },
+            { findNavController(R.id.section_home) },
+            { section_home })
+
+    private val infoDashboard = FragmentInfo(
+            R.id.navigation_dashboard,
+            { section_dashboard_wrapper },
+            { findNavController(R.id.section_dashboard) },
+            { section_dashboard })
+
+    private val infoNotifications = FragmentInfo(
+            R.id.navigation_notifications,
+            { section_notification_wrapper },
+            { findNavController(R.id.section_notification) },
+            { section_notification })
+
+    private val childFragments: Array<FragmentInfo>
+        get() = arrayOf(infoHome,
+                infoDashboard,
+                infoNotifications)
 
     var currentController: NavController? = null
 
-    private val mOnNavigationItemSelectedListener = BottomNavigationView.OnNavigationItemSelectedListener { item ->
-        var returnValue = false
-
-        when (item.itemId) {
-            R.id.navigation_home -> {
-                currentController = navHomeController
-
-                sectionHomeWrapper.visibility = View.VISIBLE
-                sectionDashboardWrapper.visibility = View.INVISIBLE
-                sectionNotificationsWrapper.visibility = View.INVISIBLE
-                returnValue = true
-            }
-            R.id.navigation_dashboard -> {
-                currentController = navDashboardController
-
-                sectionHomeWrapper.visibility = View.INVISIBLE
-                sectionDashboardWrapper.visibility = View.VISIBLE
-                sectionNotificationsWrapper.visibility = View.INVISIBLE
-                returnValue = true
-            }
-            R.id.navigation_notifications -> {
-                currentController = navNotificationController
-
-                sectionHomeWrapper.visibility = View.INVISIBLE
-                sectionDashboardWrapper.visibility = View.INVISIBLE
-                sectionNotificationsWrapper.visibility = View.VISIBLE
-                returnValue = true
-            }
+    override fun onNavigationItemSelected(item: MenuItem): Boolean {
+        currentController = childFragments.first{it.menuId == item.itemId}.controller
+        childFragments.forEach {
+            it.wrapper.visibility = if(it.menuId == item.itemId) View.VISIBLE else View.INVISIBLE
         }
         onReselected(item.itemId)
-        return@OnNavigationItemSelectedListener returnValue
+        return true
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        currentController = navHomeController
+        currentController = childFragments[0].controller
+        navigation.setOnNavigationItemSelectedListener(this)
 
-        navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener)
-
-        sectionHomeWrapper.visibility = View.VISIBLE
-        sectionDashboardWrapper.visibility = View.INVISIBLE
-        sectionNotificationsWrapper.visibility = View.INVISIBLE
+        childFragments.forEach {
+            it.wrapper.visibility = if(it.controller === currentController) View.VISIBLE else View.INVISIBLE
+        }
     }
 
     override fun supportNavigateUpTo(upIntent: Intent) {
@@ -86,37 +82,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun onReselected(itemId: Int) {
-        when (itemId) {
-            R.id.navigation_home -> {
-                val fragmentClassName = (navHomeController.currentDestination as FragmentNavigator.Destination).fragmentClass.simpleName
-
-                navHomeFragment.childFragmentManager.fragments.asReversed().forEach {
-                    if (it.javaClass.simpleName == fragmentClassName && it is OnReselectedDelegate) {
-                        it.onReselected()
-                        return@forEach
-                    }
-                }
-            }
-            R.id.navigation_dashboard -> {
-                val fragmentClassName = (navDashboardController.currentDestination as FragmentNavigator.Destination).fragmentClass.simpleName
-
-                navDashboardFragment.childFragmentManager.fragments.asReversed().forEach {
-                    if (it.javaClass.simpleName == fragmentClassName && it is OnReselectedDelegate) {
-                        it.onReselected()
-                        return@forEach
-                    }
-                }
-            }
-            R.id.navigation_notifications -> {
-                val fragmentClassName = (navNotificationController.currentDestination as FragmentNavigator.Destination).fragmentClass.simpleName
-
-                navNotificationFragment.childFragmentManager.fragments.asReversed().forEach {
-                    if (it.javaClass.simpleName == fragmentClassName && it is OnReselectedDelegate) {
-                        it.onReselected()
-                        return@forEach
-                    }
-                }
-            }
+        childFragments.firstOrNull {it.menuId == itemId }?.let { fragmentInfo ->
+            (fragmentInfo.fragment.childFragmentManager.fragments.first { it.isVisible } as? OnReselectedDelegate)?.onReselected()
         }
     }
 }

@@ -6,7 +6,6 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
 import androidx.navigation.findNavController
 import com.dirkeisold.navigation.R
 import com.dirkeisold.navigation.common.OnReselectedDelegate
@@ -15,15 +14,13 @@ import com.dirkeisold.navigation.common.setupActionBar
 import kotlinx.android.synthetic.main.notification_fragment.*
 
 class NotificationFragment : Fragment(), OnReselectedDelegate {
-    val detailsButton: Button by lazy { details_button }
-
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? =
             View.inflate(activity, R.layout.notification_fragment, null)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         view.findNavController()
 
-        detailsButton.setOnClickListener {
+        details_button.setOnClickListener {
             Log.d("NotificationFragment", "clicked on view=%s$it")
             val controller = view.findNavController()
             controller.navigate(R.id.action_notificationFragment_to_detailFragment,

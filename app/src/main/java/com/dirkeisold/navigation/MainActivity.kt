@@ -17,12 +17,12 @@ import kotlinx.android.synthetic.main.activity_main.*
 class MainActivity : AppCompatActivity(), BottomNavigationView.OnNavigationItemSelectedListener {
 
     class FragmentInfo(val menuId: Int,
-                       private val getFrame: Function1<Unit?, FrameLayout>,
-                       private val getController: Function1<Unit?, NavController>,
-                       private val getFragment: Function1<Unit?, Fragment>) {
-        val fragment: Fragment by lazy { getFragment(null) }
-        val controller: NavController by lazy { getController(null) }
-        val wrapper: FrameLayout by lazy { getFrame(null) }
+                       private val getFrame: Function0<FrameLayout>,
+                       private val getController: Function0<NavController>,
+                       private val getFragment: Function0<Fragment>) {
+        val fragment: Fragment by lazy { getFragment() }
+        val controller: NavController by lazy { getController() }
+        val wrapper: FrameLayout by lazy { getFrame() }
     }
 
     private val infoHome = FragmentInfo(
@@ -43,21 +43,12 @@ class MainActivity : AppCompatActivity(), BottomNavigationView.OnNavigationItemS
             { findNavController(R.id.section_notification) },
             { section_notification })
 
-    private val childFragments: Array<FragmentInfo>
+    private val childFragments
         get() = arrayOf(infoHome,
                 infoDashboard,
                 infoNotifications)
 
     var currentController: NavController? = null
-
-    override fun onNavigationItemSelected(item: MenuItem): Boolean {
-        currentController = childFragments.first{it.menuId == item.itemId}.controller
-        childFragments.forEach {
-            it.wrapper.visibility = if(it.menuId == item.itemId) View.VISIBLE else View.INVISIBLE
-        }
-        onReselected(item.itemId)
-        return true
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -69,6 +60,15 @@ class MainActivity : AppCompatActivity(), BottomNavigationView.OnNavigationItemS
         childFragments.forEach {
             it.wrapper.visibility = if(it.controller === currentController) View.VISIBLE else View.INVISIBLE
         }
+    }
+
+    override fun onNavigationItemSelected(item: MenuItem): Boolean {
+        currentController = childFragments.first{it.menuId == item.itemId}.controller
+        childFragments.forEach {
+            it.wrapper.visibility = if(it.menuId == item.itemId) View.VISIBLE else View.INVISIBLE
+        }
+        onReselected(item.itemId)
+        return true
     }
 
     override fun supportNavigateUpTo(upIntent: Intent) {
